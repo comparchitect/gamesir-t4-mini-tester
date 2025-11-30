@@ -160,11 +160,11 @@ class JoyConUIModel: ObservableObject {
 
 		self.leftTrigger = Float(o.leftTrigger)
 
-		self.leftStickX = Float(o.leftStickX)
-		self.leftStickY = Float(o.leftStickY)
+        self.leftStickX = 80*(Float(o.leftStickX)/Float(o.stickMax)-0.5)
+        self.leftStickY = 80*(Float(o.leftStickY)/Float(o.stickMax)-0.5)
 
-		self.rightStickX = Float(o.rightStickX)
-		self.rightStickY = Float(o.rightStickY)
+        self.rightStickX = 80*(Float(o.rightStickX)/Float(o.stickMax)-0.5)
+        self.rightStickY = 80*(Float(o.rightStickY)/Float(o.stickMax)-0.5)
 
 		self.rightTrigger = Float(o.rightTrigger)
 

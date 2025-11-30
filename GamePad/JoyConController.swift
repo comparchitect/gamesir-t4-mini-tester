@@ -7,8 +7,7 @@
 //
 
 import Foundation
-
-
+import SwiftUI
 
 final class JoyConController {
 
@@ -74,32 +73,6 @@ final class JoyConController {
 	static let RIGHT_STICK_USER_CALIBRATION_FLAG_SPI_ADDRESS:UInt16   = 0x801B; // size 2?
 	static let RIGHT_STICK_USER_CALIBRATION_VALUES_SPI_ADDRESS:UInt16 = 0x801D; // size 6
 	static let RIGHT_STICK_FACTORY_CALIBRATION_SPI_ADDRESS:UInt16     = 0x6046; // size 6
-
-	/*
-	// The raw analog joystick values will be mapped in terms of this magnitude
-	static const u16 JC_MAX_STICK_MAG		= 32767;
-	static const u16 JC_STICK_FUZZ			= 250;
-	static const u16 JC_STICK_FLAT			= 500;
-
-	// Hat values for pro controller's d-pad
-	static const u16 JC_MAX_DPAD_MAG		= 1;
-	static const u16 JC_DPAD_FUZZ			/*= 0*/;
-	static const u16 JC_DPAD_FLAT			/*= 0*/;
-
-	// The accel axes will be mapped in terms of this magnitude
-	static const u16 JC_MAX_ACCEL_MAG		= 32767;
-	static const u16 JC_ACCEL_RES			= 4096;
-	static const u16 JC_ACCEL_FUZZ			= 10;
-	static const u16 JC_ACCEL_FLAT			/*= 0*/;
-
-	// The gyro axes will be mapped in terms of this magnitude
-	static const u16 JC_MAX_GYRO_MAG		= 32767;
-	static const u16 JC_GYRO_RES			= 13371 / 936; /* 14 (14.285) */
-	static const u16 JC_GYRO_FUZZ			= 10;
-	static const u16 JC_GYRO_FLAT			/*= 0*/;
-	*/
-
-	// MARK: Misc static fields
 
 	static let MAX_STICK = 4096 // 2¹² or 2 ^ 12
 
@@ -175,10 +148,10 @@ final class JoyConController {
 	var previousLeftStick:UInt8 = 0
 
 	// analog stick data
-	var leftStickX:Int16 = 0
-	var previousLeftStickX:Int16 = 0
-	var leftStickY:Int16 = 0
-	var previousLeftStickY:Int16 = 0
+	var leftStickX:UInt16 = 0
+	var previousLeftStickX:UInt16 = 0
+	var leftStickY:UInt16 = 0
+	var previousLeftStickY:UInt16 = 0
 
 	// inertial measurement unit (imu)
 
@@ -261,10 +234,10 @@ final class JoyConController {
 	var previousRightStick:UInt8 = 0
 
 	// analog stick data
-	var rightStickX:Int16 = 0
-	var previousRightStickX:Int16 = 0
-	var rightStickY:Int16 = 0
-	var previousRightStickY:Int16 = 0
+	var rightStickX:UInt16 = 0
+	var previousRightStickX:UInt16 = 0
+	var rightStickY:UInt16 = 0
+	var previousRightStickY:UInt16 = 0
 
 	// inertial measurement unit (imu)
 
@@ -314,64 +287,163 @@ final class JoyConController {
 				name: JoyConChangeLedNotification.Name,
 				object: nil
 			)
-
 	}
 
 	func setDevice(device:IOHIDDevice, productID:Int64, transport:String/*, enableIMUReport:Bool*/) {
-
 		self.transport = transport
 		if self.transport == "Bluetooth" {
 			self.isBluetooth = true
 		}
 
 		self.productID = productID
-
-		if productID == JoyConController.CONTROLLER_ID_JOY_CON_RIGHT {
-
-			self.rightDevice = device
-			IOHIDDeviceOpen(self.rightDevice!, IOOptionBits(kIOHIDOptionsTypeNone)) // or kIOHIDManagerOptionUsePersistentProperties
-			let success = self.sendReport(device: self.rightDevice!, led1On: true)
-
-			if !success {
-				print("Error setting LED")
-			}
-
-			// ?? TODO send format with 0x11, before enabling accelerometer report
-			print("Enabled IMU: \(self.toggleIMU(device: self.rightDevice!, enable: true))")
-			print("Enabled Vibration: \(self.toggleVibration(device: self.rightDevice!, enable: true))")
-			print("Enabled IMU report: \(self.setInputReportId(device: self.rightDevice!, JoyConController.INPUT_REPORT_ID_BUTTONS_GYRO))")
-
-		} else { // left or pro
-
-			self.leftDevice = device
-			IOHIDDeviceOpen(self.leftDevice!, IOOptionBits(kIOHIDOptionsTypeNone)) // or kIOHIDManagerOptionUsePersistentProperties
-			let success = self.sendReport(device: self.leftDevice!, led1On: true)
-
-			if !success {
-				print("Error setting LED")
-			}
-
-			// ?? TODO send format with 0x11, before enabling accelerometer report
-			print("Enabled IMU: \(self.toggleIMU(device: self.leftDevice!, enable: true))") // no report answer
-			print("Enabled Vibration: \(self.toggleVibration(device: self.leftDevice!, enable: true))") // no report answer
-			print("Enabled IMU report: \(self.setInputReportId(device: self.leftDevice!, JoyConController.INPUT_REPORT_ID_BUTTONS_GYRO))") // replied with report 0x21
-
-			print("Requested IMU calibration: \(self.getIMUCalibration(device: self.leftDevice!))") // replied with report 0x21
-			print("Requested battery: \(self.getBattery(device: device))") // ??
-
-			/*
-			// Increase data rate for Bluetooth
-			if (bluetooth)
-			{
-				memset(buf, 0x00, 0x400);
-				buf[0] = 0x31; // Enabled
-				joycon_send_subcommand(handle, 0x1, 0x3, buf, 1);
-			}
-			*/
-
-		}
-
+        self.leftDevice = device
+        IOHIDDeviceOpen(self.leftDevice!, IOOptionBits(kIOHIDOptionsTypeNone)) // or kIOHIDManagerOptionUsePersistentProperties
+        initialize()
 	}
+    
+    func stopRumble()
+    {
+        let cmd_setRumble : [UInt8] = [ 0x10, JoyConController.outputReportIterator,
+                                        0x00, 0x01, 0x40, 0x40,
+                                        0x00, 0x01, 0x40, 0x40 ]
+        print("Ran set rumble command: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_setRumble)) \(JoyConController.outputReportIterator)")
+        usleep(100000)
+    }
+    
+    func startRumbleLeft()
+    {
+        let cmd_setRumble : [UInt8] = [ 0x10, JoyConController.outputReportIterator,
+                                        0x00, 0x10, 0x40, 0x40,
+                                        0x00, 0x01, 0x40, 0x40 ]
+        print("Ran set rumble command: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_setRumble)) \(JoyConController.outputReportIterator)")
+        usleep(100000)
+    }
+    
+    func startRumbleRight()
+    {
+        let cmd_setRumble : [UInt8] = [ 0x10, JoyConController.outputReportIterator,
+                                        0x00, 0x01, 0x40, 0x40,
+                                        0x00, 0x10, 0x40, 0x40 ]
+        print("Ran set rumble command: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_setRumble)) \(JoyConController.outputReportIterator)")
+        usleep(100000)
+    }
+    
+    func cmd00()
+    {
+        let cmd_toggleIMU : [UInt8] = [ 0x01, 0x00,
+                                        0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+        print("cmd00: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_toggleIMU)) \(JoyConController.outputReportIterator)");
+        usleep(10000)
+    }
+    
+    func cmd01()
+    {
+        let cmd_toggleIMU : [UInt8] = [ 0x01, 0x01,
+                                        0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                        0x10, 0xE0, 0x60, 0x00, 0x00, 0x06, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+        print("cmd01: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_toggleIMU)) \(JoyConController.outputReportIterator)");
+        usleep(10000)
+    }
+    
+    func cmd02()
+    {
+        let cmd_toggleIMU : [UInt8] = [ 0x01, 0x02,
+                                        0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                        0x40, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+        print("cmd02: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_toggleIMU)) \(JoyConController.outputReportIterator)");
+        usleep(10000)
+    }
+    
+    func cmd03()
+    {
+        let cmd_toggleIMU : [UInt8] = [ 0x01, 0x03,
+                                        0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                        0x41, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+        print("cmd03: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_toggleIMU)) \(JoyConController.outputReportIterator)");
+        usleep(10000)
+    }
+    
+    func cmd04()
+    {
+        let cmd_toggleIMU : [UInt8] = [ 0x01, 0x04,
+                                        0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                        0x10, 0x20, 0x60, 0x00, 0x00, 0x18, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+        print("cmd04: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_toggleIMU)) \(JoyConController.outputReportIterator)");
+        usleep(10000)
+    }
+    
+    func cmd05()
+    {
+        let cmd_toggleIMU : [UInt8] = [ 0x01, 0x05,
+                                        0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                        0x10, 0x80, 0x60, 0x00, 0x00, 0x06, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+        print("cmd05: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_toggleIMU)) \(JoyConController.outputReportIterator)");
+        usleep(10000)
+    }
+    
+    func cmd06()
+    {
+        let cmd_toggleIMU : [UInt8] = [ 0x01, 0x06,
+                                        0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                        0x10, 0x3D, 0x60, 0x00, 0x00, 0x12, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+        print("cmd06: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_toggleIMU)) \(JoyConController.outputReportIterator)");
+        usleep(10000)
+    }
+    
+    func cmd07()
+    {
+        let cmd_toggleIMU : [UInt8] = [ 0x01, 0x07,
+                                        0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40,
+                                        0x48, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+        print("cmd07: \(self.arbCommand(device: self.leftDevice!, buffer: cmd_toggleIMU)) \(JoyConController.outputReportIterator)");
+        usleep(10000)
+    }
+    
+    func initialize()
+    {
+        // PUT CONTROLLER INTO GYRO MODE
+        cmd00()
+        cmd01()
+        cmd02()
+        cmd03()
+        cmd04()
+        cmd05()
+        cmd06()
+        cmd07()
+    }
 
 	/// Gets called by GamePadMonitor
 	func parseReport(_ report:Data, controllerType:Int64) {
@@ -379,7 +451,9 @@ final class JoyConController {
 		// report[0] // the report type
 
 		let bluetoothOffset = self.isBluetooth ? 0 : 10
-
+        
+        //print(report as NSData)
+        
 		if controllerType == JoyConController.CONTROLLER_ID_JOY_CON_LEFT {
 
 			// MARK: left joycon input report
@@ -390,32 +464,92 @@ final class JoyConController {
 
 				// MARK: left digital buttons
 
-				self.leftMainButtons = report[1 + bluetoothOffset]
-
+				self.leftMainButtons = report[1]
 				// self.batteryLeftLevel = UInt16((leftMainButtons & 0b1111_0000) >> 4) // FIXME I don't think this is accurate
-
 				self.directionalPad = leftMainButtons & 0b0000_1111
+                self.yButton = self.directionalPad & 0b0000_0100 == 0b0000_0100
+                self.xButton = self.directionalPad & 0b0000_1000 == 0b0000_1000
+                self.aButton = self.directionalPad & 0b0000_0010 == 0b0000_0010
+                self.bButton = self.directionalPad & 0b0000_0001 == 0b0000_0001
+                
+                self.directionalPad = leftMainButtons & 0b1111_0000
+                self.leftShoulderButton = self.directionalPad & 0b0001_0000 == 0b0001_0000
+                self.leftTriggerButton = self.directionalPad & 0b0100_0000 == 0b0100_0000
+                self.rightShoulderButton = self.directionalPad & 0b0010_0000 == 0b0010_0000
+                self.rightTriggerButton = self.directionalPad & 0b1000_0000 == 0b1000_0000
+                
+                
+                self.directionalPad = report[3]
+                self.directionalPad = self.directionalPad & 0b0000_1111
+                switch(self.directionalPad)
+                {
+                    case 0b0000_0000:
+                        self.upButton = true
+                        self.rightButton = false
+                        self.downButton = false
+                        self.leftButton = false
+                        break
+                    case 0b0000_0001:
+                        self.upButton = true
+                        self.rightButton = true
+                        self.downButton = false
+                        self.leftButton = false
+                        break
+                    case 0b0000_0010:
+                        self.upButton = false
+                        self.rightButton = true
+                        self.downButton = false
+                        self.leftButton = false
+                        break
+                    case 0b0000_0011:
+                        self.upButton = false
+                        self.rightButton = true
+                        self.downButton = true
+                        self.leftButton = false
+                        break
+                    case 0b0000_0100:
+                        self.upButton = false
+                        self.rightButton = false
+                        self.downButton = true
+                        self.leftButton = false
+                        break
+                    case 0b0000_0101:
+                        self.upButton = false
+                        self.rightButton = false
+                        self.downButton = true
+                        self.leftButton = true
+                        break
+                    case 0b0000_0110:
+                        self.upButton = false
+                        self.rightButton = false
+                        self.downButton = false
+                        self.leftButton = true
+                        break
+                    case 0b0000_0111:
+                        self.upButton = true
+                        self.rightButton = false
+                        self.downButton = false
+                        self.leftButton = true
+                        break
+                    default:
+                        self.upButton = false
+                        self.rightButton = false
+                        self.downButton = false
+                        self.leftButton = false
+                        break
+                }
 
-				self.upButton    = self.directionalPad & 0b0000_0100 == 0b0000_0100
-				self.rightButton = self.directionalPad & 0b0000_1000 == 0b0000_1000
-				self.downButton  = self.directionalPad & 0b0000_0010 == 0b0000_0010
-				self.leftButton  = self.directionalPad & 0b0000_0001 == 0b0000_0001
-
-				self.leftSideTopButton    = leftMainButtons & 0b0001_0000 == 0b0001_0000
-				self.leftSideBottomButton = leftMainButtons & 0b0010_0000 == 0b0010_0000
-
-				self.leftSecondaryButtons = report[2 + bluetoothOffset]
-
-				self.leftShoulderButton = leftSecondaryButtons & 0b0100_0000 == 0b0100_0000
-				self.leftTriggerButton  = leftSecondaryButtons & 0b1000_0000 == 0b1000_0000
-
-				self.minusButton        = leftSecondaryButtons & 0b0000_0001 == 0b0000_0001
-				self.captureButton      = leftSecondaryButtons & 0b0010_0000 == 0b0010_0000
-
-				self.leftStickButton    = leftSecondaryButtons & 0b0000_0100 == 0b0000_0100
-
+				self.leftSecondaryButtons = report[2]
+				self.minusButton        = leftSecondaryButtons & 0b0000_1111 == 0b0000_0001
+                self.plusButton         = leftSecondaryButtons & 0b0000_1111 == 0b0000_0010
+                self.leftStickButton    = leftSecondaryButtons & 0b0000_1111 == 0b0000_0100
+                self.rightStickButton   = leftSecondaryButtons & 0b0000_1111 == 0b0000_1000
+				self.captureButton      = leftSecondaryButtons & 0b1111_0000 == 0b0010_0000
+                self.homeButton         = leftSecondaryButtons & 0b1111_0000 == 0b0001_0000
+                
 				if leftMainButtons != self.previousLeftMainButtons
-					|| leftSecondaryButtons != self.previousLeftSecondaryButtons
+                    || leftSecondaryButtons != self.previousLeftSecondaryButtons
+                    || directionalPad != self.previousDirectionalPad
 				{
 
 					DispatchQueue.main.async {
@@ -458,6 +592,11 @@ final class JoyConController {
 					self.previousRightButton = self.rightButton
 					self.previousDownButton = self.downButton
 					self.previousLeftButton = self.leftButton
+                    
+                    self.previousYButton = self.yButton
+                    self.previousXButton = self.xButton
+                    self.previousAButton = self.aButton
+                    self.previousBButton = self.bButton
 
 					self.previousLeftSideTopButton = self.leftSideTopButton
 					self.previousLeftSideBottomButton = self.leftSideBottomButton
@@ -466,189 +605,233 @@ final class JoyConController {
 
 					self.previousLeftShoulderButton = self.leftShoulderButton
 					self.previousLeftTriggerButton = self.leftTriggerButton
+                    self.previousRightShoulderButton = self.rightShoulderButton
+                    self.previousRightTriggerButton = self.rightTriggerButton
 
 					self.previousMinusButton = self.minusButton
 					self.previousCaptureButton = self.captureButton
+                    self.previousPlusButton = self.plusButton
+                    self.previousHomeButton = self.homeButton
 
 					self.previousLeftStickButton = self.leftStickButton
-
+                    self.previousRightStickButton = self.rightStickButton
 				}
-
-				self.leftStick = report[3 + bluetoothOffset]
-
-				// MARK: left analog buttons
-				// origin left top for compatibility with other controllers
-
-				if self.leftStick        == JoyConLeftDirection.right.rawValue || self.leftStick == JoyConLeftDirection.rightUp.rawValue || self.leftStick == JoyConLeftDirection.rightDown.rawValue {
-					self.leftStickX = 1
-				} else if self.leftStick == JoyConLeftDirection.left.rawValue  || self.leftStick == JoyConLeftDirection.leftUp.rawValue  || self.leftStick == JoyConLeftDirection.leftDown.rawValue {
-					self.leftStickX = -1
-				} else {
-					self.leftStickX = 0
-				}
-
-				if self.leftStick        == JoyConLeftDirection.down.rawValue || self.leftStick == JoyConLeftDirection.leftDown.rawValue || self.leftStick == JoyConLeftDirection.rightDown.rawValue {
-					self.leftStickY = 1
-				} else if self.leftStick == JoyConLeftDirection.up.rawValue   || self.leftStick == JoyConLeftDirection.leftUp.rawValue   || self.leftStick == JoyConLeftDirection.rightUp.rawValue {
-					self.leftStickY = -1
-				} else {
-					self.leftStickY = 0
-				}
+                
+                self.leftStickX = UInt16(report[5]) << 8 | UInt16(report[4])
+                self.leftStickY = UInt16(report[7]) << 8 | UInt16(report[6])
+                self.rightStickX = UInt16(report[9]) << 8 | UInt16(report[8])
+                self.rightStickY = UInt16(report[11]) << 8 | UInt16(report[10])
 
 				if self.previousLeftStickX != self.leftStickX
 					|| self.previousLeftStickY != self.leftStickY
+                    || self.previousRightStickY != self.rightStickY
+                    || self.previousRightStickY != self.rightStickY
 				{
-
 					DispatchQueue.main.async {
 						NotificationCenter.default.post(
 							name: GamepadAnalogChangedNotification.Name,
 							object: GamepadAnalogChangedNotification(
-								leftStickX: UInt16(self.leftStickX),
-								leftStickY: UInt16(self.leftStickY),
-								rightStickX: UInt16(self.rightStickX),
-								rightStickY: UInt16(self.rightStickY),
-								stickMax: 2,
+								leftStickX: self.leftStickX,
+								leftStickY: self.leftStickY,
+								rightStickX: self.rightStickX,
+								rightStickY: self.rightStickY,
+								stickMax: 0xffff,
 								leftTrigger: self.leftTriggerButton ? UInt16(UInt8.max) : 0,
 								rightTrigger: self.rightTriggerButton ? UInt16(UInt8.max) : 0,
 								triggerMax: UInt16(UInt8.max)
 							)
 						)
 					}
-
-					self.previousLeftStickX = self.leftStickX
-					self.previousLeftStickY = self.leftStickY
-
+                    
+                    self.previousLeftStickX = self.leftStickX
+                    self.previousLeftStickY = self.leftStickY
+                    self.previousRightStickX = self.rightStickX
+                    self.previousRightStickY = self.rightStickY
 				}
-
 			} else if report[0] == JoyConController.INPUT_REPORT_ID_BUTTONS_GYRO {
+                self.leftMainButtons = report[3]
+                self.directionalPad = leftMainButtons & 0b0000_1111
+                self.yButton = self.directionalPad & 0b0000_0001 == 0b0000_0001
+                self.xButton = self.directionalPad & 0b0000_0010 == 0b0000_0010
+                self.aButton = self.directionalPad & 0b0000_1000 == 0b0000_1000
+                self.bButton = self.directionalPad & 0b0000_0100 == 0b0000_0100
+                
+                self.directionalPad = leftMainButtons & 0b1111_0000
+                self.rightShoulderButton = self.directionalPad & 0b0100_0000 == 0b0100_0000
+                self.rightTriggerButton = self.directionalPad & 0b1000_0000 == 0b1000_0000
+                 
+                switch(report[5] & 0b0000_1111)
+                {
+                    case 0b0000_0010:
+                        self.upButton = true
+                        self.rightButton = false
+                        self.downButton = false
+                        self.leftButton = false
+                        break
+                    case 0b0000_0110:
+                        self.upButton = true
+                        self.rightButton = true
+                        self.downButton = false
+                        self.leftButton = false
+                        break
+                    case 0b0000_0100:
+                        self.upButton = false
+                        self.rightButton = true
+                        self.downButton = false
+                        self.leftButton = false
+                        break
+                    case 0b0000_0101:
+                        self.upButton = false
+                        self.rightButton = true
+                        self.downButton = true
+                        self.leftButton = false
+                        break
+                    case 0b0000_0001:
+                        self.upButton = false
+                        self.rightButton = false
+                        self.downButton = true
+                        self.leftButton = false
+                        break
+                    case 0b0000_1001:
+                        self.upButton = false
+                        self.rightButton = false
+                        self.downButton = true
+                        self.leftButton = true
+                        break
+                    case 0b0000_1000:
+                        self.upButton = false
+                        self.rightButton = false
+                        self.downButton = false
+                        self.leftButton = true
+                        break
+                    case 0b0000_1010:
+                        self.upButton = true
+                        self.rightButton = false
+                        self.downButton = false
+                        self.leftButton = true
+                        break
+                    default:
+                        self.upButton = false
+                        self.rightButton = false
+                        self.downButton = false
+                        self.leftButton = false
+                        break
+                }
+                
+                self.leftShoulderButton = report[5] & 0b0100_0000 == 0b0100_0000
+                self.leftTriggerButton = report[5] & 0b1000_0000 == 0b1000_0000
+                self.directionalPad = report[5]
 
-				// MARK: left joycon gyro input report
+                self.leftSecondaryButtons = report[4]
+                self.minusButton        = leftSecondaryButtons & 0b0000_1111 == 0b0000_0001
+                self.plusButton         = leftSecondaryButtons & 0b0000_1111 == 0b0000_0010
+                self.leftStickButton    = leftSecondaryButtons & 0b0000_1111 == 0b0000_1000
+                self.rightStickButton   = leftSecondaryButtons & 0b0000_1111 == 0b0000_0100
+                self.captureButton      = leftSecondaryButtons & 0b1111_0000 == 0b0010_0000
+                self.homeButton         = leftSecondaryButtons & 0b1111_0000 == 0b0001_0000
+                
+                if leftMainButtons != self.previousLeftMainButtons
+                    || leftSecondaryButtons != self.previousLeftSecondaryButtons
+                    || directionalPad != self.previousDirectionalPad
+                {
 
-				// print(report[1]) // increments in 3
-				// print(report[2]) // 0x8E 142
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(
+                            name: GamepadButtonChangedNotification.Name,
+                            object: GamepadButtonChangedNotification(
+                                leftTriggerButton: self.leftTriggerButton,
+                                leftShoulderButton: self.leftShoulderButton,
+                                minusButton: self.minusButton,
+                                leftSideTopButton: self.leftSideTopButton,
+                                leftSideBottomButton: self.leftSideBottomButton,
+                                upButton: self.upButton,
+                                rightButton: self.rightButton,
+                                downButton: self.downButton,
+                                leftButton: self.leftButton,
+                                socialButton: self.captureButton,
+                                leftStickButton: self.leftStickButton,
+                                trackPadButton: false,
+                                centralButton: false,
+                                rightStickButton: self.rightStickButton,
+                                rightAuxiliaryButton: self.homeButton,
+                                faceNorthButton: self.xButton,
+                                faceEastButton: self.aButton,
+                                faceSouthButton: self.bButton,
+                                faceWestButton: self.yButton,
+                                rightSideBottomButton: self.rightSideBottomButton,
+                                rightSideTopButton: self.rightSideTopButton,
+                                plusButton: self.plusButton,
+                                rightShoulderButton: self.rightShoulderButton,
+                                rightTriggerButton: self.rightTriggerButton
+                            )
+                        )
+                    }
 
-				// MARK: left digital buttons
+                    self.previousLeftMainButtons = self.leftMainButtons
 
-				// report[3] is only used by right joy-con
+                    self.previousDirectionalPad = self.directionalPad
 
-				self.leftMainButtons = report[5 + bluetoothOffset] // TODO not sure about bluetooth offset for tihs report
+                    self.previousUpButton = self.upButton
+                    self.previousRightButton = self.rightButton
+                    self.previousDownButton = self.downButton
+                    self.previousLeftButton = self.leftButton
+                    
+                    self.previousYButton = self.yButton
+                    self.previousXButton = self.xButton
+                    self.previousAButton = self.aButton
+                    self.previousBButton = self.bButton
 
-				self.directionalPad = leftMainButtons & 0b0000_1111
+                    self.previousLeftSideTopButton = self.leftSideTopButton
+                    self.previousLeftSideBottomButton = self.leftSideBottomButton
 
-				self.upButton    = self.directionalPad & 0b0000_0010 == 0b0000_0010
-				self.rightButton = self.directionalPad & 0b0000_0100 == 0b0000_0100
-				self.downButton  = self.directionalPad & 0b0000_0001 == 0b0000_0001
-				self.leftButton  = self.directionalPad & 0b0000_1000 == 0b0000_1000
+                    self.previousLeftSecondaryButtons = self.leftSecondaryButtons
 
-				self.leftSideTopButton    = leftMainButtons & 0b0010_0000 == 0b0010_0000
-				self.leftSideBottomButton = leftMainButtons & 0b0001_0000 == 0b0001_0000
+                    self.previousLeftShoulderButton = self.leftShoulderButton
+                    self.previousLeftTriggerButton = self.leftTriggerButton
+                    self.previousRightShoulderButton = self.rightShoulderButton
+                    self.previousRightTriggerButton = self.rightTriggerButton
 
-				self.leftShoulderButton = leftMainButtons & 0b0100_0000 == 0b0100_0000
-				self.leftTriggerButton  = leftMainButtons & 0b1000_0000 == 0b1000_0000
+                    self.previousMinusButton = self.minusButton
+                    self.previousCaptureButton = self.captureButton
+                    self.previousPlusButton = self.plusButton
+                    self.previousHomeButton = self.homeButton
 
-				self.minusButton     = self.leftSecondaryButtons & 0b0000_0001 == 0b0000_0001
-				self.leftStickButton = self.leftSecondaryButtons & 0b0000_1000 == 0b0000_1000
-				self.captureButton   = self.leftSecondaryButtons & 0b0010_0000 == 0b0010_0000
+                    self.previousLeftStickButton = self.leftStickButton
+                    self.previousRightStickButton = self.rightStickButton
+                }
+                
+                self.leftStickX = UInt16(report[7] & 0b0000_1111) << 8 | UInt16(report[6])
+                self.leftStickY = UInt16(0xfff) - (UInt16(report[8]) << 4 | UInt16(report[7] & 0b1111_0000) >> 4)
+                self.rightStickX = UInt16(report[10] & 0b0000_1111) << 8 | UInt16(report[9])
+                self.rightStickY = UInt16(0xfff) - (UInt16(report[11]) << 4 | UInt16(report[10] & 0b1111_0000) >> 4)
 
-				if leftMainButtons != self.previousLeftMainButtons
-					|| leftSecondaryButtons != self.previousLeftSecondaryButtons
-				{
-
-					DispatchQueue.main.async {
-						NotificationCenter.default.post(
-							name: GamepadButtonChangedNotification.Name,
-							object: GamepadButtonChangedNotification(
-								leftTriggerButton: self.leftTriggerButton,
-								leftShoulderButton: self.leftShoulderButton,
-								minusButton: self.minusButton,
-								leftSideTopButton: self.leftSideTopButton,
-								leftSideBottomButton: self.leftSideBottomButton,
-								upButton: self.upButton,
-								rightButton: self.rightButton,
-								downButton: self.downButton,
-								leftButton: self.leftButton,
-								socialButton: self.captureButton,
-								leftStickButton: self.leftStickButton,
-								trackPadButton: false,
-								centralButton: false,
-								rightStickButton: self.rightStickButton,
-								rightAuxiliaryButton: self.homeButton,
-								faceNorthButton: self.xButton,
-								faceEastButton: self.aButton,
-								faceSouthButton: self.bButton,
-								faceWestButton: self.yButton,
-								rightSideBottomButton: self.rightSideBottomButton,
-								rightSideTopButton: self.rightSideTopButton,
-								plusButton: self.plusButton,
-								rightShoulderButton: self.rightShoulderButton,
-								rightTriggerButton: self.rightTriggerButton
-							)
-						)
-					}
-
-					self.previousLeftMainButtons = self.leftMainButtons
-
-					self.previousDirectionalPad = self.directionalPad
-
-					self.previousUpButton = self.upButton
-					self.previousRightButton = self.rightButton
-					self.previousDownButton = self.downButton
-					self.previousLeftButton = self.leftButton
-
-					self.previousLeftSideTopButton = self.leftSideTopButton
-					self.previousLeftSideBottomButton = self.leftSideBottomButton
-
-					self.previousLeftSecondaryButtons = self.leftSecondaryButtons
-
-					self.previousLeftShoulderButton = self.leftShoulderButton
-					self.previousLeftTriggerButton = self.leftTriggerButton
-
-					self.previousMinusButton = self.minusButton
-					self.previousCaptureButton = self.captureButton
-
-					self.previousLeftStickButton = self.leftStickButton
-
-				}
-
-				// print("report[9]:  \(report[9])")  // always 0!?
-				// print("report[10]: \(report[10])") // always 0!?
-				// print("report[11]: \(report[11])") // always 0!?
-
-				// print("report[12]: \(report[12])") // always 192!?
-
-				// MARK: left analog buttons
-
-				// TODO calibrate
-				self.leftStickX = Int16(report[7] & 0b0000_1111) << 8 | Int16(report[6]) // 12 bits actually
-				self.leftStickY = Int16(report[8]) << 4 | Int16(report[7]) >> 4 // 12 bits actually
-
-				if self.previousLeftStickX != self.leftStickX
-					|| self.previousLeftStickY != self.leftStickY
-				{
-
-					DispatchQueue.main.async {
-						NotificationCenter.default.post(
-							name: GamepadAnalogChangedNotification.Name,
-							object: GamepadAnalogChangedNotification(
-								leftStickX: UInt16(self.leftStickX),
-								leftStickY: UInt16(self.leftStickY),
-								rightStickX: UInt16(self.rightStickX),
-								rightStickY: UInt16(self.rightStickY),
-								stickMax: UInt16(JoyConController.MAX_STICK), // 12 bits
-								leftTrigger: self.leftTriggerButton ? UInt16(UInt8.max) : 0,
-								rightTrigger: self.rightTriggerButton ? UInt16(UInt8.max) : 0,
-								triggerMax: UInt16(UInt8.max)
-							)
-						)
-					}
-
-					self.previousLeftStickX = self.leftStickX
-					self.previousLeftStickY = self.leftStickY
-
-				}
-
-				// MARK: left inertial movement unit (imu)
-
+                if self.previousLeftStickX != self.leftStickX
+                    || self.previousLeftStickY != self.leftStickY
+                    || self.previousRightStickY != self.rightStickY
+                    || self.previousRightStickY != self.rightStickY
+                {
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(
+                            name: GamepadAnalogChangedNotification.Name,
+                            object: GamepadAnalogChangedNotification(
+                                leftStickX: self.leftStickX,
+                                leftStickY: self.leftStickY,
+                                rightStickX: self.rightStickX,
+                                rightStickY: self.rightStickY,
+                                stickMax: 0x0fff,
+                                leftTrigger: self.leftTriggerButton ? UInt16(UInt8.max) : 0,
+                                rightTrigger: self.rightTriggerButton ? UInt16(UInt8.max) : 0,
+                                triggerMax: UInt16(UInt8.max)
+                            )
+                        )
+                    }
+                    
+                    self.previousLeftStickX = self.leftStickX
+                    self.previousLeftStickY = self.leftStickY
+                    self.previousRightStickX = self.rightStickX
+                    self.previousRightStickY = self.rightStickY
+                }
+                
 				// TODO x, y, z, pitch, yaw, and roll will depend upon the joy-con being used vertically in pair, or horizontally as standalone, debug this later
 
 				// The controller sends the sensor data 3 times with a little bit different values
@@ -669,26 +852,6 @@ final class JoyConController {
 				self.leftGyroPitch = Int32(Int16(report[20 + bluetoothOffset]) << 8 | Int16(report[19 + bluetoothOffset])) // TODO calibrate
 				self.leftGyroYaw   = Int32(Int16(report[22 + bluetoothOffset]) << 8 | Int16(report[21 + bluetoothOffset])) // TODO calibrate
 				self.leftGyroRoll  = Int32(Int16(report[24 + bluetoothOffset]) << 8 | Int16(report[23 + bluetoothOffset])) // TODO calibrate
-
-				/*
-				jc->accel.x = (float)(uint16_to_int16(packet[13] | (packet[14] << 8) & 0xFF00)) * jc->acc_cal_coeff[0];
-				jc->gyro.roll	= (float)((uint16_to_int16(packet[19] | (packet[20] << 8) & 0xFF00)) - jc->sensor_cal[1][0]) * jc->gyro_cal_coeff[0];
-
-				// offsets:
-				{
-					jc->setGyroOffsets();
-
-					jc->gyro.roll	-= jc->gyro.offset.roll;
-					jc->gyro.pitch	-= jc->gyro.offset.pitch;
-					jc->gyro.yaw	-= jc->gyro.offset.yaw;
-
-					//tracker.counter1++;
-					//if (tracker.counter1 > 10) {
-					//	tracker.counter1 = 0;
-					//	printf("%.3f %.3f %.3f\n", abs(jc->gyro.roll), abs(jc->gyro.pitch), abs(jc->gyro.yaw));
-					//}
-				}
-				*/
 
 				if self.previousLeftGyroPitch != self.leftGyroPitch
 					|| self.previousLeftGyroYaw != self.leftGyroYaw
@@ -719,50 +882,10 @@ final class JoyConController {
 							)
 						)
 					}
-
 				}
-
-				/*
-				12 	x70, xC0, xB0 	Vibrator input report. Decides if next vibration pattern should be sent.
-				13 (report ID x21) 	x00, x80, x90, x82 	ACK byte for subcmd reply. ACK: MSB is 1, NACK: MSB is 0. If reply is ACK and has data, byte12 & 0x7F gives as the type of data. If simple ACK or NACK, the data type portion is x00
-				14 (report ID x21) 	x02, x10, x03 	Reply-to subcommand ID. The subcommand ID is used as-is.
-				15-49 (report ID x21) 	-- 	Subcommand reply data. Max 35 bytes (excludes 2 byte subcmd ack above).
-				13-49 (report ID x23) 	-- 	NFC/IR MCU FW update input report. Max 37 bytes.
-
-				49-361 (report ID x31) 	-- 	NFC/IR data input report. Max 313 bytes.
-				*/
-
-				/*
-				// all zeroes
-				print("report[25]: \(report[25])")
-				print("report[26]: \(report[26])")
-				print("report[27]: \(report[27])")
-				print("report[28]: \(report[28])")
-				print("report[29]: \(report[29])")
-
-				print("report[30]: \(report[30])")
-				print("report[31]: \(report[31])")
-				print("report[32]: \(report[32])")
-				print("report[33]: \(report[33])")
-				print("report[34]: \(report[34])")
-				print("report[35]: \(report[35])")
-				print("report[36]: \(report[36])")
-				print("report[37]: \(report[37])")
-				print("report[38]: \(report[38])")
-				print("report[39]: \(report[39])")
-
-				print("report[40]: \(report[40])")
-				print("report[41]: \(report[41])")
-				print("report[42]: \(report[42])")
-				print("report[43]: \(report[43])")
-				print("report[44]: \(report[44])")
-				print("report[45]: \(report[45])")
-				print("report[46]: \(report[46])")
-				print("report[47]: \(report[47])")
-				print("report[48]: \(report[48])")
-				*/
-
 			} else if report[0] == JoyConController.INPUT_REPORT_ID_SUBCOMMNAD_REPLY {
+                //print("subcommand: ")
+                //print(report as NSData)
 
 				/*
 				spi serial pehipheral interface
@@ -787,6 +910,7 @@ final class JoyConController {
 				Little-endian int32 address, int8 size. Max size x1D data to write. Replies with x8011 ack and a uint8 status. x00 = success, x01 = write protected.
 				*/
 
+                /*
 				if report[13] & 0b1000_0000 != 0b1000_0000 {
 					print("output report not acknowledged")
 					return
@@ -936,430 +1060,18 @@ final class JoyConController {
 				print("report[46]: 0x\(String(report[46], radix: 16)) \(report[46])")
 				print("report[47]: 0x\(String(report[47], radix: 16)) \(report[47])")
 				print("report[48]: 0x\(String(report[48], radix: 16)) \(report[48])")
-
+*/
 			} else if report.count > 0 {
 
 				// input 21 is a response for spi subcommands apparently, treat that here
 				print("unsupported report: \(report[0]) 0x\(String(report[0], radix:16))")
 
 			}
-
-		} else if controllerType == JoyConController.CONTROLLER_ID_JOY_CON_RIGHT {
-
-
-			// MARK: right joycon input report
-
-			if report[0] == JoyConController.INPUT_REPORT_ID_BUTTONS {
-
-				// MARK: right joycon simple input report
-
-				// MARK: right digital buttons
-
-				self.rightMainButtons = report[1 + bluetoothOffset]
-
-				// self.batteryRightLevel = UInt16((rightMainButtons & 0b1111_0000) >> 4) // FIXME I don't think this is accurate
-
-				self.faceButtons = rightMainButtons & 0b0000_1111
-
-				self.xButton = self.faceButtons & 0b0000_0010 == 0b0000_0010
-				self.aButton = self.faceButtons & 0b0000_0001 == 0b0000_0001
-				self.bButton = self.faceButtons & 0b0000_0100 == 0b0000_0100
-				self.yButton = self.faceButtons & 0b0000_1000 == 0b0000_1000
-
-				self.rightSideTopButton    = rightMainButtons & 0b0010_0000 == 0b0010_0000
-				self.rightSideBottomButton = rightMainButtons & 0b0001_0000 == 0b0001_0000
-
-				self.rightSecondaryButtons = report[2 + bluetoothOffset]
-
-				self.rightShoulderButton = rightSecondaryButtons & 0b0100_0000 == 0b0100_0000
-				self.rightTriggerButton  = rightSecondaryButtons & 0b1000_0000 == 0b1000_0000
-
-				//print(String(rightSecondaryButtons, radix: 2))
-
-				self.plusButton          = rightSecondaryButtons & 0b0000_0010 == 0b0000_0010
-				self.homeButton          = rightSecondaryButtons & 0b0001_0000 == 0b0001_0000
-
-				self.rightStickButton    = rightSecondaryButtons & 0b0000_1000 == 0b0000_1000
-
-				if rightMainButtons != self.previousRightMainButtons
-					|| rightSecondaryButtons != self.previousRightSecondaryButtons
-				{
-
-					DispatchQueue.main.async {
-						NotificationCenter.default.post(
-							name: GamepadButtonChangedNotification.Name,
-							object: GamepadButtonChangedNotification(
-								leftTriggerButton: self.leftTriggerButton,
-								leftShoulderButton: self.leftShoulderButton,
-								minusButton: self.minusButton,
-								leftSideTopButton: self.leftSideTopButton,
-								leftSideBottomButton: self.leftSideBottomButton,
-								upButton: self.upButton,
-								rightButton: self.rightButton,
-								downButton: self.downButton,
-								leftButton: self.leftButton,
-								socialButton: self.captureButton,
-								leftStickButton: self.leftStickButton,
-								trackPadButton: false,
-								centralButton: false,
-								rightStickButton: self.rightStickButton,
-								rightAuxiliaryButton: self.homeButton,
-								faceNorthButton: self.xButton,
-								faceEastButton: self.aButton,
-								faceSouthButton: self.bButton,
-								faceWestButton: self.yButton,
-								rightSideBottomButton: self.rightSideBottomButton,
-								rightSideTopButton: self.rightSideTopButton,
-								plusButton: self.plusButton,
-								rightShoulderButton: self.rightShoulderButton,
-								rightTriggerButton: self.rightTriggerButton
-							)
-						)
-					}
-
-					self.previousRightMainButtons = self.rightMainButtons
-
-					self.previousFaceButtons = self.faceButtons
-
-					self.previousXButton = self.xButton
-					self.previousAButton = self.aButton
-					self.previousBButton = self.bButton
-					self.previousYButton = self.yButton
-
-					self.previousRightSideTopButton = self.rightSideTopButton
-					self.previousRightSideBottomButton = self.rightSideBottomButton
-
-					self.previousRightSecondaryButtons = self.rightSecondaryButtons
-
-					self.previousRightShoulderButton = self.rightShoulderButton
-					self.previousRightTriggerButton = self.rightTriggerButton
-
-					self.previousPlusButton = self.plusButton
-					self.previousHomeButton = self.homeButton
-
-					self.previousRightStickButton = self.rightStickButton
-
-				}
-
-				self.rightStick = report[3 + bluetoothOffset]
-
-				// MARK: right analog buttons
-				// origin left top for compatibility with other controllers
-
-				if self.rightStick        == JoyConRightDirection.right.rawValue || self.rightStick == JoyConRightDirection.rightUp.rawValue || self.rightStick == JoyConRightDirection.rightDown.rawValue {
-					self.rightStickX = 1
-				} else if self.rightStick == JoyConRightDirection.left.rawValue  || self.rightStick == JoyConRightDirection.leftUp.rawValue  || self.rightStick == JoyConRightDirection.leftDown.rawValue {
-					self.rightStickX = -1
-				} else {
-					self.rightStickX = 0
-				}
-
-				if self.rightStick        == JoyConRightDirection.down.rawValue || self.rightStick == JoyConRightDirection.leftDown.rawValue || self.rightStick == JoyConRightDirection.rightDown.rawValue {
-					self.rightStickY = 1
-				} else if self.rightStick == JoyConRightDirection.up.rawValue   || self.rightStick == JoyConRightDirection.leftUp.rawValue   || self.rightStick == JoyConRightDirection.rightUp.rawValue {
-					self.rightStickY = -1
-				} else {
-					self.rightStickY = 0
-				}
-
-				if self.previousRightStickX != self.rightStickX
-					|| self.previousRightStickY != self.rightStickY
-				{
-
-					DispatchQueue.main.async {
-						NotificationCenter.default.post(
-							name: GamepadAnalogChangedNotification.Name,
-							object: GamepadAnalogChangedNotification(
-								leftStickX: UInt16(self.leftStickX),
-								leftStickY: UInt16(self.leftStickY),
-								rightStickX: UInt16(self.rightStickX),
-								rightStickY: UInt16(self.rightStickY),
-								stickMax: 2,
-								leftTrigger: self.leftTriggerButton ? UInt16(UInt8.max) : 0,
-								rightTrigger: self.rightTriggerButton ? UInt16(UInt8.max) : 0,
-								triggerMax: UInt16(UInt8.max)
-							)
-						)
-					}
-
-					self.previousRightStickX = self.rightStickX
-					self.previousRightStickY = self.rightStickY
-
-				}
-
-			} else if report[0] == JoyConController.INPUT_REPORT_ID_BUTTONS_GYRO {
-
-				// MARK: right joycon gyro input report
-
-				// print(report[1]) // increments in 3 (Increments very fast. Can be used to estimate excess Bluetooth latency.)
-
-				// print(report[2])
-				/*
-				2 high nibble 	0 - 9 	Battery level. 8=full, 6=medium, 4=low, 2=critical, 0=empty. LSB=Charging.
-				2 low nibble 	x0, x1, xE 	Connection info. (con_info >> 1) & 3 - 3=JC, 0=Pro/ChrGrip. con_info & 1 - 1=Switch/USB powered.
-				*/
-
-				// MARK: right digital buttons
-
-				self.rightMainButtons = report[3 + bluetoothOffset] // TODO not sure about bluetooth offset for this report
-
-				self.faceButtons = rightMainButtons & 0b0000_1111
-
-				// TODO check these
-				self.yButton = self.faceButtons & 0b0000_0010 == 0b0000_0010
-				self.xButton = self.faceButtons & 0b0000_0100 == 0b0000_0100
-				self.aButton = self.faceButtons & 0b0000_0001 == 0b0000_0001
-				self.bButton = self.faceButtons & 0b0000_1000 == 0b0000_1000
-
-				self.rightSideTopButton    = rightMainButtons & 0b0010_0000 == 0b0010_0000
-				self.rightSideBottomButton = rightMainButtons & 0b0001_0000 == 0b0001_0000
-
-				self.rightShoulderButton = rightMainButtons & 0b0100_0000 == 0b0100_0000
-				self.rightTriggerButton  = rightMainButtons & 0b1000_0000 == 0b1000_0000
-
-				self.rightSecondaryButtons = report[4 + bluetoothOffset] // I can | with the leftSecondaryButtons to get a merged status of the buttons
-
-				self.plusButton       = self.rightSecondaryButtons & 0b0000_0010 == 0b0000_0010
-				self.rightStickButton = self.rightSecondaryButtons & 0b0000_0100 == 0b0000_0100
-				self.homeButton       = self.rightSecondaryButtons & 0b0001_0000 == 0b0001_0000
-
-				// charging grip 0b1000_0000
-
-				// report[5] is only used by left joy-con
-
-				if rightMainButtons != self.previousRightMainButtons
-					|| rightSecondaryButtons != self.previousRightSecondaryButtons
-				{
-
-					DispatchQueue.main.async {
-						NotificationCenter.default.post(
-							name: GamepadButtonChangedNotification.Name,
-							object: GamepadButtonChangedNotification(
-								leftTriggerButton: self.leftTriggerButton,
-								leftShoulderButton: self.leftShoulderButton,
-								minusButton: self.minusButton,
-								leftSideTopButton: self.leftSideTopButton,
-								leftSideBottomButton: self.leftSideBottomButton,
-								upButton: self.upButton,
-								rightButton: self.rightButton,
-								downButton: self.downButton,
-								leftButton: self.leftButton,
-								socialButton: self.captureButton,
-								leftStickButton: self.leftStickButton,
-								trackPadButton: false,
-								centralButton: false,
-								rightStickButton: self.rightStickButton,
-								rightAuxiliaryButton: self.homeButton,
-								faceNorthButton: self.xButton,
-								faceEastButton: self.aButton,
-								faceSouthButton: self.bButton,
-								faceWestButton: self.yButton,
-								rightSideBottomButton: self.rightSideBottomButton,
-								rightSideTopButton: self.rightSideTopButton,
-								plusButton: self.plusButton,
-								rightShoulderButton: self.rightShoulderButton,
-								rightTriggerButton: self.rightTriggerButton
-							)
-						)
-					}
-
-					self.previousRightMainButtons = self.rightMainButtons
-
-					self.previousFaceButtons = self.faceButtons
-
-					self.previousXButton = self.xButton
-					self.previousAButton = self.aButton
-					self.previousBButton = self.bButton
-					self.previousYButton = self.yButton
-
-					self.previousRightSideTopButton = self.rightSideTopButton
-					self.previousRightSideBottomButton = self.rightSideBottomButton
-
-					self.previousRightSecondaryButtons = self.rightSecondaryButtons
-
-					self.previousRightShoulderButton = self.rightShoulderButton
-					self.previousRightTriggerButton = self.rightTriggerButton
-
-					self.previousPlusButton = self.plusButton
-					self.previousHomeButton = self.homeButton
-
-					self.previousRightStickButton = self.rightStickButton
-
-				}
-
-				// print("report[9]:  \(report[9])")  // always 0!? before specifying format 94
-				// print("report[10]: \(report[10])") // always 0!? before specifying format 72
-				// print("report[11]: \(report[11])") // always 0!? before specifying format 111
-
-				// print("report[12]: \(report[12])") // always 192!? before specifying format 9
-
-				// MARK: right analog buttons
-
-				// TODO calibrate
-				self.rightStickX = Int16(report[10] & 0b0000_1111) << 8 | Int16(report[9]) // 12 bits actually
-				self.rightStickY = Int16(report[11]) << 4 | Int16(report[10]) >> 4 // 12 bits actually
-
-				if self.previousRightStickX != self.rightStickX
-					|| self.previousRightStickY != self.rightStickY
-				{
-
-					DispatchQueue.main.async {
-						NotificationCenter.default.post(
-							name: GamepadAnalogChangedNotification.Name,
-							object: GamepadAnalogChangedNotification(
-								leftStickX: UInt16(self.leftStickX),
-								leftStickY: UInt16(self.leftStickY),
-								rightStickX: UInt16(self.rightStickX),
-								rightStickY: UInt16(self.rightStickY),
-								stickMax: UInt16(JoyConController.MAX_STICK), // 12 bits
-								leftTrigger: self.leftTriggerButton ? UInt16(UInt8.max) : 0,
-								rightTrigger: self.rightTriggerButton ? UInt16(UInt8.max) : 0,
-								triggerMax: UInt16(UInt8.max)
-							)
-						)
-					}
-
-					self.previousRightStickX = self.rightStickX
-					self.previousRightStickY = self.rightStickY
-
-				}
-
-				/*
-				print("report[0]: \(report[0])")
-				print("report[1]: \(report[1])")
-				print("report[2]: \(report[2])")
-				print("report[3]: \(report[3])")
-				print("report[4]: \(report[4])")
-				print("report[5]: \(report[5])")
-				print("report[6]: \(report[6])")
-				print("report[7]: \(report[7])")
-				print("report[8]: \(report[8])")
-				print("report[9]: \(report[9])")
-
-				print("report[10]: \(report[10])")
-				print("report[11]: \(report[11])")
-				print("report[12]: \(report[12])")
-				print("report[13]: \(report[13])")
-				print("report[14]: \(report[14])")
-				print("report[15]: \(report[15])")
-				print("report[16]: \(report[16])")
-				print("report[17]: \(report[17])")
-				print("report[18]: \(report[18])")
-				print("report[19]: \(report[19])")
-
-				print("report[20]: \(report[20])")
-				print("report[21]: \(report[21])")
-				print("report[22]: \(report[22])")
-				print("report[23]: \(report[23])")
-				print("report[24]: \(report[24])")
-				print("report[25]: \(report[25])")
-				print("report[26]: \(report[26])")
-				print("report[27]: \(report[27])")
-				print("report[28]: \(report[28])")
-				print("report[29]: \(report[29])")
-
-				print("report[30]: \(report[30])")
-				print("report[31]: \(report[31])")
-				print("report[32]: \(report[32])")
-				print("report[33]: \(report[33])")
-				print("report[34]: \(report[34])")
-				print("report[35]: \(report[35])")
-				print("report[36]: \(report[36])")
-				print("report[37]: \(report[37])")
-				print("report[38]: \(report[38])")
-				print("report[39]: \(report[39])")
-
-				print("report[40]: \(report[40])")
-				print("report[41]: \(report[41])")
-				print("report[42]: \(report[42])")
-				print("report[43]: \(report[43])")
-				print("report[44]: \(report[44])")
-				print("report[45]: \(report[45])")
-				print("report[46]: \(report[46])")
-				print("report[47]: \(report[47])")
-				print("report[48]: \(report[48])")
-				*/
-
-			} else if report[0] == JoyConController.INPUT_REPORT_ID_SUBCOMMNAD_REPLY {
-
-				print("report 0x21 size: \(report.count)")
-
-				// address, compare with what I sent
-				print("report[1]: \(report[1])")
-				print("report[2]: \(report[2])")
-				print("report[3]: \(report[3])")
-				print("report[4]: \(report[4])")
-
-				// all zeroes for right imu factory
-				print("report[5]: \(report[5])")
-				print("report[6]: \(report[6])")
-				print("report[7]: \(report[7])")
-				print("report[8]: \(report[8])")
-				print("report[9]: \(report[9])")
-
-				// data
-				print("report[10]: \(report[10])")
-				print("report[11]: \(report[11])")
-				print("report[12]: \(report[12])")
-				print("report[13]: \(report[13])")
-				print("report[14]: \(report[14])")
-
-				// all zeroes for right imu factory
-				print("report[15]: \(report[15])")
-				print("report[16]: \(report[16])")
-				print("report[17]: \(report[17])")
-				print("report[18]: \(report[18])")
-				print("report[19]: \(report[19])")
-
-				print("report[20]: \(report[20])")
-				print("report[21]: \(report[21])")
-				print("report[22]: \(report[22])")
-				print("report[23]: \(report[23])")
-				print("report[24]: \(report[24])")
-				print("report[25]: \(report[25])")
-				print("report[26]: \(report[26])")
-				print("report[27]: \(report[27])")
-				print("report[28]: \(report[28])")
-				print("report[29]: \(report[29])")
-
-				print("report[30]: \(report[30])")
-				print("report[31]: \(report[31])")
-				print("report[32]: \(report[32])")
-				print("report[33]: \(report[33])")
-				print("report[34]: \(report[34])")
-				print("report[35]: \(report[35])")
-				print("report[36]: \(report[36])")
-				print("report[37]: \(report[37])")
-				print("report[38]: \(report[38])")
-				print("report[39]: \(report[39])")
-
-				print("report[40]: \(report[40])")
-				print("report[41]: \(report[41])")
-				print("report[42]: \(report[42])")
-				print("report[43]: \(report[43])")
-				print("report[44]: \(report[44])")
-				print("report[45]: \(report[45])")
-				print("report[46]: \(report[46])")
-				print("report[47]: \(report[47])")
-				print("report[48]: \(report[48])")
-
-			} else if report.count > 0 {
-
-				// input 21 is a response for spi subcommands apparently, treat that here
-				print("unsupported report: \(report[0]) 0x\(String(report[0], radix:16))")
-
-			}
-
-			// TODO IR
-
-			// TODO NFC
-
 		}
-
-		// 4-7 (Pro Con) 	x40 8A 4F 8A 	Left analog stick data
-		// 8-11 (Pro Con) 	xD0 7E DF 7F 	Right analog stick data
-		// for joy-cons this can be ignored
-
+        else
+        {
+            print("unknown controller type")
+        }
 	}
 
 	// MARK: - hid output report methods
@@ -1527,12 +1239,63 @@ final class JoyConController {
 		return true
 
 	}
+    
+    func arbCommand(device:IOHIDDevice, buffer:[UInt8]) -> Bool {
+        let toggleSuccess = IOHIDDeviceSetReport(
+            device,
+            kIOHIDReportTypeOutput,
+            Int(buffer[0]), // Report ID
+            buffer,
+            buffer.count
+        );
+        
+        print(buffer.count)
+
+        JoyConController.outputReportIterator = (JoyConController.outputReportIterator + 1) % 0x0F
+
+        if toggleSuccess != kIOReturnSuccess {
+            return false
+        }
+        
+        return true
+    }
+    
+    func arbCommandWithCallback(device:IOHIDDevice, buffer:[UInt8]) -> Bool {
+        let appDelegate = NSApplication.shared.delegate as? AppDelegate
+        let hidContext = unsafeBitCast(appDelegate?.gamePadHIDMonitor, to: UnsafeMutableRawPointer.self)
+        
+        let toggleSuccess = IOHIDDeviceSetReportWithCallback(
+            device,
+            kIOHIDReportTypeOutput,
+            Int(buffer[0]), // Report ID
+            buffer,
+            buffer.count,
+            100,
+            {(context, result, sender, reportType, reportID, reportPointer, reportLength) in
+                // restoring the swift type of the pointer to void
+                let caller = unsafeBitCast(context, to: GamepadHIDMonitor.self)
+                // Put report bytes in a Swift friendly object
+                let report = Data(bytes:reportPointer, count:reportLength)
+                // must call another function to avoid creating a closure, which is not supported for c functions
+                return caller.inputReportCallback(result:result, sender:sender!, reportType:reportType, reportID:reportID, report:report)
+            },
+            hidContext
+        );
+
+        JoyConController.outputReportIterator = (JoyConController.outputReportIterator + 1) % 0x0F
+
+        if toggleSuccess != kIOReturnSuccess {
+            return false
+        }
+        
+        return true
+    }
 
 	// MARK: - imu hid output report methods
 
 	func toggleIMU(device:IOHIDDevice, enable:Bool) -> Bool {
 
-		let joyConToggleIMUReportLength = 49
+		let joyConToggleIMUReportLength = 12
 		var buffer = [UInt8](repeating: 0, count: joyConToggleIMUReportLength)
 
 		buffer[0] = JoyConController.OUTPUT_REPORT_ID_RUMBLE_SEND_SUB_TYPE
@@ -1546,7 +1309,7 @@ final class JoyConController {
 
 		// neutral rumble right
 		buffer[6] = 0x00
-		buffer[7] = 0x10
+		buffer[7] = 0x01
 		buffer[8] = 0x40
 		buffer[9] = 0x40
 
@@ -1623,12 +1386,12 @@ final class JoyConController {
 		// 01 ±4G
 		// 02 ±2G
 		// 03 ±16G
-		buffer[12] = 0x02 // 2G
+		buffer[12] = 0x00//0x02 // 2G
 
 		// gyro sampling frequency??
 		// 00 833Hz (high perf)
 		// 01 208Hz (high perf, default)
-		buffer[13] = 0x01
+		buffer[13] = 0x00//0x01
 
 		// accel anti-aliasing filter bandwidth
 		// 00 200Hz
@@ -1658,11 +1421,7 @@ final class JoyConController {
 	func getIMUCalibration(device:IOHIDDevice) -> Bool {
 
 		var success = false
-
-		// TODO check for user calibration, and then choose between factory and user
-		// success = self.readSpiFlash(device:device, startAddress: JoyConController.IMU_USER_CALIBRATION_FLAG_SPI_ADDRESS, size: 2) // TODO check size
-		// success = self.readSpiFlash(device:device, startAddress: JoyConController.IMU_USER_CALIBRATION_VALUES_SPI_ADDRESS, size: 12) // TODO check size
-		success = self.readSpiFlash(device:device, startAddress: JoyConController.IMU_FACTORY_CALIBRATION_SPI_ADDRESS, size: 12) // was 10 TODO magic constant 12, give a name...
+		success = self.readSpiFlash(device:device, startAddress: JoyConController.IMU_FACTORY_CALIBRATION_SPI_ADDRESS, size: 12)
 
 		return success
 
@@ -1670,144 +1429,9 @@ final class JoyConController {
 
 	func parseIMUCalibration(report:Data) {
 
-		// TODO
-
-		/*
-		// report type
-		report[0]: 0x21 33
-
-		// read spi ack
-		report[13]: 0x90 144
-		report[14]: 0x10 16
-
-		echoes the request info, followed by size bytes of data.
-
-		// 32 bits address little endian
-		report[15]: 0x20 32
-		report[16]: 0x60 96
-		report[17]: 0x0 0
-		report[18]: 0x0 0
-
-		// length
-		report[19]: 0xa 12
-
-		// imu calibration data uses 12 bits!?
-
-		0 - 2 	FFB0 FEB9 00E0 	Acc XYZ origin position when completely horizontal and stick is upside
-		report[20]: 0xab 171
-		report[21]: 0xfe 254
-		report[22]: 0x11 17
-
-		3 - 5 	4000 4000 4000 	Acc XYZ sensitivity special coeff, for default sensitivity: ±8G.
-		report[23]: 0xff 255
-		report[24]: 0xee 238
-		report[25]: 0x0 0
-
-		6 - 8 	000E FFDF FFD0 	Gyro XYZ origin position when still
-		report[26]: 0x0 0
-		report[27]: 0x40 64
-		report[28]: 0x0 0
-
-		9 - 11 	343B 343B 343B 	Gyro XYZ sensitivity special coeff, for default sensitivity: ±2000dps.
-		report[29]: 0x40 64
-		report[30]: 0x0 0
-		report[31]: 0x0 0
-
-		Reference code for converting from uint16_t to int16_t for doing the above calculations:
-
-		int16_t uint16_to_int16(uint16_t a) {
-			int16_t b;
-			char* aPointer = (char*)&a, *bPointer = (char*)&b;
-			memcpy(bPointer, aPointer, sizeof(a));
-			return b;
-		}
-		*/
-
 	}
 
-	// MARK: - lower level hid output report methods
-
-	/*
-	static const s16 DFLT_ACCEL_OFFSET /*= 0*/;
-	static const s16 DFLT_ACCEL_SCALE = 16384;
-	static const s16 DFLT_GYRO_OFFSET /*= 0*/;
-	static const s16 DFLT_GYRO_SCALE  = 13371;
-
-		for (i = 0; i < 3; i++) {
-			ctlr->accel_cal.offset[i] = DFLT_ACCEL_OFFSET;
-			ctlr->accel_cal.scale[i] = DFLT_ACCEL_SCALE;
-			ctlr->gyro_cal.offset[i] = DFLT_GYRO_OFFSET;
-			ctlr->gyro_cal.scale[i] = DFLT_GYRO_SCALE;
-		}
-
-		for (i = 0; i < 3; i++) {
-			int j = i * 2;
-
-			ctlr->accel_cal.offset[i] = raw_cal[j + 0] |
-							((s16)raw_cal[j + 1] << 8);
-			ctlr->accel_cal.scale[i] = raw_cal[j + 6] |
-							((s16)raw_cal[j + 7] << 8);
-			ctlr->gyro_cal.offset[i] = raw_cal[j + 12] |
-							((s16)raw_cal[j + 13] << 8);
-			ctlr->gyro_cal.scale[i] = raw_cal[j + 18] |
-							((s16)raw_cal[j + 19] << 8);
-
-
-	// Magic value denoting presence of user calibration
-	static const u16 JC_CAL_USR_MAGIC_0		= 0xB2;
-	static const u16 JC_CAL_USR_MAGIC_1		= 0xA1;
-	static const u8 JC_CAL_USR_MAGIC_SIZE		= 2;
-
-
-
-	u8 factory_stick_cal[0x12];
-    u8 user_stick_cal[0x16];
-    u8 sensor_model[0x6];
-    u8 stick_model[0x24];
-    u8 factory_sensor_cal[0x18];
-    u8 user_sensor_cal[0x1A];
-    s16 sensor_cal[0x2][0x3];
-    u16 stick_cal_x_l[0x3];
-    u16 stick_cal_y_l[0x3];
-    u16 stick_cal_x_r[0x3];
-    u16 stick_cal_y_r[0x3];
-    memset(factory_stick_cal, 0, 0x12);
-    memset(user_stick_cal, 0, 0x16);
-    memset(sensor_model, 0, 0x6);
-    memset(stick_model, 0, 0x12);
-    memset(factory_sensor_cal, 0, 0x18);
-    memset(user_sensor_cal, 0, 0x1A);
-    memset(sensor_cal, 0, sizeof(sensor_cal));
-    memset(stick_cal_x_l, 0, sizeof(stick_cal_x_l));
-    memset(stick_cal_y_l, 0, sizeof(stick_cal_y_l));
-    memset(stick_cal_x_r, 0, sizeof(stick_cal_x_r));
-    memset(stick_cal_y_r, 0, sizeof(stick_cal_y_r));
-    get_spi_data(0x6020, 0x18, factory_sensor_cal); // JC_IMU_CAL_FCT_DATA_ADDR
-    get_spi_data(0x603D, 0x12, factory_stick_cal); // JC_CAL_FCT_DATA_LEFT_ADDR
-    get_spi_data(0x6080, 0x6, sensor_model);
-    get_spi_data(0x6086, 0x12, stick_model);
-    get_spi_data(0x6098, 0x12, &stick_model[0x12]);
-    get_spi_data(0x8010, 0x16, user_stick_cal); // JC_CAL_USR_LEFT_MAGIC_ADDR
-    get_spi_data(0x8026, 0x1A, user_sensor_cal); // JC_IMU_CAL_USR_MAGIC_ADDR
-	*/
-
 	func setInputReportId(device:IOHIDDevice, _ inputReportId:UInt8) -> Bool {
-
-		// TODO
-
-		/*
-		// Set input report mode (to push at 60hz)
-		// x00	Used with cmd x11. Active polling for NFC/IR camera data. 0x31 data format must be set first. Answers with more than 300 bytes ID 31 packet
-		// x01	Same as 00. Active polling mode for NFC/IR MCU configuration data.
-		// x02	Same as 00. Active polling mode for NFC/IR data and configuration. For specific NFC/IR modes. Active polling mode for IR camera data. Special IR mode or before configuring it ?
-		// x03 	Same as 00. Active polling mode for IR camera data. For specific IR modes.
-
-		// x21	Unknown. An input report with this ID has pairing or mcu data or serial flash data or device info
-		// x23	MCU update input report ?
-
-		x33 	Unknown mode.
-		x35 	Unknown mode.
-		*/
 
 		let joyConSetInputReportReportLength = 49
 		var buffer = [UInt8](repeating: 0, count: joyConSetInputReportReportLength)
@@ -1908,163 +1532,6 @@ final class JoyConController {
 		}
 
 		return true
-
-
-
-
-
-
-		/*
-
-		int get_spi_data(u32 offset, const u16 read_len, u8 *test_buf) {
-
-			int res;
-			u8 buf[49];
-
-			while (1) {
-				memset(buf, 0, sizeof(buf));
-				auto hdr = (brcm_hdr *)buf;
-				auto pkt = (brcm_cmd_01 *)(hdr + 1);
-				hdr->cmd = 1;
-				hdr->timer = timming_byte & 0xF;
-				timming_byte++;
-				pkt->subcmd = 0x10;
-				pkt->spi_data.offset = offset;
-				pkt->spi_data.size = read_len;
-				res = hid_write(handle, buf, sizeof(buf));
-
-				int retries = 0;
-				while (1) {
-					res = hid_read_timeout(handle, buf, sizeof(buf), 64);
-					if ((*(u16*)&buf[0xD] == 0x1090) && (*(uint32_t*)&buf[0xF] == offset))
-						goto check_result;
-
-					retries++;
-					if (retries > 8 || res == 0)
-						break;
-				}
-				error_reading++;
-				if (error_reading > 20)
-					return 1;
-			}
-			check_result:
-			if (res >= 0x14 + read_len) {
-					for (int i = 0; i < read_len; i++) {
-						test_buf[i] = buf[0x14 + i];
-					}
-			}
-
-			return 0;
-		}
-
-
-
-		private void dump_calibration_data() {
-            if (isSnes || thirdParty)
-                return;
-            HIDapi.hid_set_nonblocking(handle, 0);
-            byte[] buf_ = ReadSPI(0x80, (isLeft ? (byte)0x12 : (byte)0x1d), 9); // get user calibration data if possible
-            bool found = false;
-            for (int i = 0; i < 9; ++i) {
-                if (buf_[i] != 0xff) {
-                    form.AppendTextBox("Using user stick calibration data.\r\n");
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                form.AppendTextBox("Using factory stick calibration data.\r\n");
-                buf_ = ReadSPI(0x60, (isLeft ? (byte)0x3d : (byte)0x46), 9); // get user calibration data if possible
-            }
-            stick_cal[isLeft ? 0 : 2] = (UInt16)((buf_[1] << 8) & 0xF00 | buf_[0]); // X Axis Max above center
-            stick_cal[isLeft ? 1 : 3] = (UInt16)((buf_[2] << 4) | (buf_[1] >> 4));  // Y Axis Max above center
-            stick_cal[isLeft ? 2 : 4] = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]); // X Axis Center
-            stick_cal[isLeft ? 3 : 5] = (UInt16)((buf_[5] << 4) | (buf_[4] >> 4));  // Y Axis Center
-            stick_cal[isLeft ? 4 : 0] = (UInt16)((buf_[7] << 8) & 0xF00 | buf_[6]); // X Axis Min below center
-            stick_cal[isLeft ? 5 : 1] = (UInt16)((buf_[8] << 4) | (buf_[7] >> 4));  // Y Axis Min below center
-
-            PrintArray(stick_cal, len: 6, start: 0, format: "Stick calibration data: {0:S}");
-
-            if (isPro) {
-                buf_ = ReadSPI(0x80, (!isLeft ? (byte)0x12 : (byte)0x1d), 9); // get user calibration data if possible
-                found = false;
-                for (int i = 0; i < 9; ++i) {
-                    if (buf_[i] != 0xff) {
-                        form.AppendTextBox("Using user stick calibration data.\r\n");
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    form.AppendTextBox("Using factory stick calibration data.\r\n");
-                    buf_ = ReadSPI(0x60, (!isLeft ? (byte)0x3d : (byte)0x46), 9); // get user calibration data if possible
-                }
-                stick2_cal[!isLeft ? 0 : 2] = (UInt16)((buf_[1] << 8) & 0xF00 | buf_[0]); // X Axis Max above center
-                stick2_cal[!isLeft ? 1 : 3] = (UInt16)((buf_[2] << 4) | (buf_[1] >> 4));  // Y Axis Max above center
-                stick2_cal[!isLeft ? 2 : 4] = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]); // X Axis Center
-                stick2_cal[!isLeft ? 3 : 5] = (UInt16)((buf_[5] << 4) | (buf_[4] >> 4));  // Y Axis Center
-                stick2_cal[!isLeft ? 4 : 0] = (UInt16)((buf_[7] << 8) & 0xF00 | buf_[6]); // X Axis Min below center
-                stick2_cal[!isLeft ? 5 : 1] = (UInt16)((buf_[8] << 4) | (buf_[7] >> 4));  // Y Axis Min below center
-
-                PrintArray(stick2_cal, len: 6, start: 0, format: "Stick calibration data: {0:S}");
-
-                buf_ = ReadSPI(0x60, (!isLeft ? (byte)0x86 : (byte)0x98), 16);
-                deadzone2 = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]);
-            }
-
-            buf_ = ReadSPI(0x60, (isLeft ? (byte)0x86 : (byte)0x98), 16);
-            deadzone = (UInt16)((buf_[4] << 8) & 0xF00 | buf_[3]);
-
-            buf_ = ReadSPI(0x80, 0x28, 10);
-            acc_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-            acc_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-            acc_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-            buf_ = ReadSPI(0x80, 0x2E, 10);
-            acc_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-            acc_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-            acc_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-            buf_ = ReadSPI(0x80, 0x34, 10);
-            gyr_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-            gyr_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-            gyr_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-            buf_ = ReadSPI(0x80, 0x3A, 10);
-            gyr_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-            gyr_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-            gyr_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-            PrintArray(gyr_neutral, len: 3, d: DebugType.IMU, format: "User gyro neutral position: {0:S}");
-
-            // This is an extremely messy way of checking to see whether there is user stick calibration data present, but I've seen conflicting user calibration data on blank Joy-Cons. Worth another look eventually.
-            if (gyr_neutral[0] + gyr_neutral[1] + gyr_neutral[2] == -3 || Math.Abs(gyr_neutral[0]) > 100 || Math.Abs(gyr_neutral[1]) > 100 || Math.Abs(gyr_neutral[2]) > 100) {
-                buf_ = ReadSPI(0x60, 0x20, 10);
-                acc_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-                acc_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-                acc_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-                buf_ = ReadSPI(0x60, 0x26, 10);
-                acc_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-                acc_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-                acc_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-                buf_ = ReadSPI(0x60, 0x2C, 10);
-                gyr_neutral[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-                gyr_neutral[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-                gyr_neutral[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-                buf_ = ReadSPI(0x60, 0x32, 10);
-                gyr_sensiti[0] = (Int16)(buf_[0] | ((buf_[1] << 8) & 0xff00));
-                gyr_sensiti[1] = (Int16)(buf_[2] | ((buf_[3] << 8) & 0xff00));
-                gyr_sensiti[2] = (Int16)(buf_[4] | ((buf_[5] << 8) & 0xff00));
-
-                PrintArray(gyr_neutral, len: 3, d: DebugType.IMU, format: "Factory gyro neutral position: {0:S}");
-            }
-            HIDapi.hid_set_nonblocking(handle, 1);
-        }
-		*/
-
 	}
 
 	func sendReport(
@@ -2080,82 +1547,6 @@ final class JoyConController {
 		// TODO home led...
 	) -> Bool {
 
-		/*
-		OUTPUT 0x01
-
-		Rumble and subcommand.
-
-		The OUTPUT 1 report is how all normal subcommands are sent. It also includes rumble data.
-
-		Sample C code for sending a subcommand:
-
-		uint8_t buf[0x40]; bzero(buf, 0x40);
-		buf[0] = 1; // 0x10 for rumble only
-		buf[1] = GlobalPacketNumber; // Increment by 1 for each packet sent. It loops in 0x0 - 0xF range.
-		memcpy(buf + 2, rumbleData, 8);
-		buf[10] = subcommandID;
-		memcpy(buf + 11, subcommandData, subcommandDataLen);
-		hid_write(handle, buf, 0x40);
-
-		You can send rumble data and subcommand with x01 command, otherwise only rumble with x10 command.
-
-		See "Rumble data" below.
-
-		OUTPUT 0x10
-		Rumble only. See OUTPUT 0x01 and "Rumble data" below.
-
-
-
-
-
-		Subcommand 0x38: Set HOME Light
-
-		25 bytes argument that control 49 elements.
-		Byte #, Nibble 	Remarks
-		x00, High 	Number of Mini Cycles. 1-15. If number of cycles is > 0 then x0 = x1
-		x00, Low 	Global Mini Cycle Duration. 8ms - 175ms. Value x0 = 0ms/OFF
-		x01, High 	LED Start Intensity. Value x0=0% - xF=100%
-		x01, Low 	Number of Full Cycles. 1-15. Value x0 is repeat forever, but if also Byte x00 High nibble is set to x0, it does the 1st Mini Cycle and then the LED stays on with LED Start Intensity.
-
-		When all selected Mini Cycles play and then end, this is a full cycle.
-
-		The Mini Cycle configurations are grouped in two (except the 15th):
-		Byte #, Nibble 	Remarks
-		x02, High 	Mini Cycle 1 LED Intensity
-		x02, Low 	Mini Cycle 2 LED Intensity
-		x03, High 	Fading Transition Duration to Mini Cycle 1 (Uses PWM). Value is a Multiplier of Global Mini Cycle Duration
-		x03, Low 	LED Duration Multiplier of Mini Cycle 1. x0 = x1 = x1
-		x04, High 	Fading Transition Duration to Mini Cycle 2 (Uses PWM). Value is a Multiplier of Global Mini Cycle Duration
-		x04, Low 	LED Duration Multiplier of Mini Cycle 1. x0 = x1 = x1
-
-		The Fading Transition uses a PWM to increment the transition to the Mini Cycle.
-
-		The LED Duration Multiplier and the Fading Multiplier use the same algorithm: Global Mini Cycle Duration ms * Multiplier value.
-
-		Example: GMCD is set to xF = 175ms and LED Duration Multiplier is set to x4. The Duration that the LED will stay on it's configured intensity is then 175 * 4 = 700ms.
-
-		Unused Mini Cycles can be skipped from the output packet.
-
-		Table of Mini Cycle configuration:
-		Byte #, Nibble 	Remarks
-		x02, High 	Mini Cycle 1 LED Intensity
-		x02, Low 	Mini Cycle 2 LED Intensity
-		x03 High/Low 	Fading/LED Duration Multipliers for MC 1
-		x04 High/Low 	Fading/LED Duration Multipliers for MC 2
-		x05, High 	Mini Cycle 3 LED Intensity
-		x05, Low 	Mini Cycle 4 LED Intensity
-		x06 High/Low 	Fading/LED Duration Multipliers for MC 3
-		x06 High/Low 	Fading/LED Duration Multipliers for MC 4
-		... 	...
-		x20, High 	Mini Cycle 13 LED Intensity
-		x20, Low 	Mini Cycle 14 LED Intensity
-		x21 High/Low 	Fading/LED Duration Multipliers for MC 13
-		x22 High/Low 	Fading/LED Duration Multipliers for MC 14
-		x23, High 	Mini Cycle 15 LED Intensity
-		x23, Low 	Unused
-		x24 High/Low 	Fading/LED Duration Multipliers for MC 15
-		*/
-
 		let joyConSetPlayerLightsReportLength = 49
 		var buffer = [UInt8](repeating: 0, count: joyConSetPlayerLightsReportLength)
 
@@ -2167,7 +1558,7 @@ final class JoyConController {
 		buffer[3] = 0x01
 		buffer[4] = 0x40
 		buffer[5] = 0x40
-
+        
 		// neutral rumble right
 		buffer[6] = 0x00
 		buffer[7] = 0x10

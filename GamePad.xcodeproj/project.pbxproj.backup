@@ -11,7 +11,17 @@
 		0C2030132E98001B007EDACE /* Controller3DView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2030122E98001B007EDACE /* Controller3DView.swift */; };
 		0C2030152E980EDB007EDACE /* ButtonStateModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2030142E980EDB007EDACE /* ButtonStateModel.swift */; };
 		0C2030172E98104D007EDACE /* AnalogStateModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2030162E98104D007EDACE /* AnalogStateModel.swift */; };
+		0C7029BC27D7031A00ADB7C1 /* DSUMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7029BB27D7031A00ADB7C1 /* DSUMessage.swift */; };
+		0C7029BE27D7032000ADB7C1 /* DSUController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7029BD27D7032000ADB7C1 /* DSUController.swift */; };
+		0C7029C027D7032600ADB7C1 /* DSUServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7029BF27D7032600ADB7C1 /* DSUServer.swift */; };
+		0C7029C227D703A600ADB7C1 /* ControllerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7029C127D703A600ADB7C1 /* ControllerService.swift */; };
 		0C7029C427D703E500ADB7C1 /* ControllerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7029C327D703E500ADB7C1 /* ControllerInfo.swift */; };
+		0C7029C627D7052600ADB7C1 /* ClientsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7029C527D7052600ADB7C1 /* ClientsViewModel.swift */; };
+		0C7029C827D7053200ADB7C1 /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7029C727D7053200ADB7C1 /* Client.swift */; };
+		0CDA7FE42E986D19008A3B88 /* DSUServerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDA7FE32E986D19008A3B88 /* DSUServerViewModel.swift */; };
+		0CDA7FE62E9873A8008A3B88 /* JoyConBackedDSUController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDA7FE52E9873A8008A3B88 /* JoyConBackedDSUController.swift */; };
+		0CDA7FE82E9873B3008A3B88 /* JoyConToDSUBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDA7FE72E9873B3008A3B88 /* JoyConToDSUBridge.swift */; };
+		0CDA7FEA2E98741E008A3B88 /* DSUPacketSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDA7FE92E98741E008A3B88 /* DSUPacketSource.swift */; };
 		A90DC849248C4E67003CD258 /* JoyConController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90DC848248C4E67003CD258 /* JoyConController.swift */; };
 		A90EBFAA24BEB6C000C8DEAE /* GamepadIMUChangedNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90EBFA924BEB6C000C8DEAE /* GamepadIMUChangedNotification.swift */; };
 		A97A418D249C6F3000250DB7 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A97A418C249C6F0700250DB7 /* libz.tbd */; };
@@ -56,7 +66,17 @@
 		0C2030122E98001B007EDACE /* Controller3DView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controller3DView.swift; sourceTree = "<group>"; };
 		0C2030142E980EDB007EDACE /* ButtonStateModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStateModel.swift; sourceTree = "<group>"; };
 		0C2030162E98104D007EDACE /* AnalogStateModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalogStateModel.swift; sourceTree = "<group>"; };
+		0C7029BB27D7031A00ADB7C1 /* DSUMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DSUMessage.swift; sourceTree = "<group>"; };
+		0C7029BD27D7032000ADB7C1 /* DSUController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DSUController.swift; sourceTree = "<group>"; };
+		0C7029BF27D7032600ADB7C1 /* DSUServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DSUServer.swift; sourceTree = "<group>"; };
+		0C7029C127D703A600ADB7C1 /* ControllerService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ControllerService.swift; sourceTree = "<group>"; };
 		0C7029C327D703E500ADB7C1 /* ControllerInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ControllerInfo.swift; sourceTree = "<group>"; };
+		0C7029C527D7052600ADB7C1 /* ClientsViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClientsViewModel.swift; sourceTree = "<group>"; };
+		0C7029C727D7053200ADB7C1 /* Client.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Client.swift; sourceTree = "<group>"; };
+		0CDA7FE32E986D19008A3B88 /* DSUServerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSUServerViewModel.swift; sourceTree = "<group>"; };
+		0CDA7FE52E9873A8008A3B88 /* JoyConBackedDSUController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoyConBackedDSUController.swift; sourceTree = "<group>"; };
+		0CDA7FE72E9873B3008A3B88 /* JoyConToDSUBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoyConToDSUBridge.swift; sourceTree = "<group>"; };
+		0CDA7FE92E98741E008A3B88 /* DSUPacketSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSUPacketSource.swift; sourceTree = "<group>"; };
 		A90DC848248C4E67003CD258 /* JoyConController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoyConController.swift; sourceTree = "<group>"; };
 		A90EBFA924BEB6C000C8DEAE /* GamepadIMUChangedNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamepadIMUChangedNotification.swift; sourceTree = "<group>"; };
 		A97A418C249C6F0700250DB7 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
@@ -170,12 +190,22 @@
 				A9D72F87248202360000A89F /* GamePad.entitlements */,
 				A9888FA1249063AC0084EA3C /* Notifications */,
 				A9D72FA9248204080000A89F /* GamepadHIDMonitor.swift */,
+				0C7029BB27D7031A00ADB7C1 /* DSUMessage.swift */,
+				0C7029BD27D7032000ADB7C1 /* DSUController.swift */,
+				0C7029C127D703A600ADB7C1 /* ControllerService.swift */,
 				0C7029C327D703E500ADB7C1 /* ControllerInfo.swift */,
+				0C7029C527D7052600ADB7C1 /* ClientsViewModel.swift */,
+				0C7029BF27D7032600ADB7C1 /* DSUServer.swift */,
+				0C7029C727D7053200ADB7C1 /* Client.swift */,
 				A90DC848248C4E67003CD258 /* JoyConController.swift */,
 				0C2030102E980017007EDACE /* OrientationModel.swift */,
 				0C2030122E98001B007EDACE /* Controller3DView.swift */,
 				0C2030142E980EDB007EDACE /* ButtonStateModel.swift */,
 				0C2030162E98104D007EDACE /* AnalogStateModel.swift */,
+				0CDA7FE32E986D19008A3B88 /* DSUServerViewModel.swift */,
+				0CDA7FE52E9873A8008A3B88 /* JoyConBackedDSUController.swift */,
+				0CDA7FE72E9873B3008A3B88 /* JoyConToDSUBridge.swift */,
+				0CDA7FE92E98741E008A3B88 /* DSUPacketSource.swift */,
 			);
 			path = GamePad;
 			sourceTree = "<group>";
@@ -339,8 +369,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0CDA7FE42E986D19008A3B88 /* DSUServerViewModel.swift in Sources */,
+				0C7029BC27D7031A00ADB7C1 /* DSUMessage.swift in Sources */,
 				A9879C212485833000AB4DE9 /* GamepadButtonChangedNotification.swift in Sources */,
 				A993A107249EB9E50059EADA /* JoyConChangeRumbleNotification.swift in Sources */,
+				0C7029BE27D7032000ADB7C1 /* DSUController.swift in Sources */,
 				A9A27CBF249F12E000EFC9D5 /* JoyConUIModel.swift in Sources */,
 				A99249CC2673C54E00573097 /* JoyConTab.swift in Sources */,
 				A9FBA15224BBC39F009B7CEE /* Coords2d.swift in Sources */,
@@ -350,10 +383,17 @@
 				A9D72FAA248204080000A89F /* GamepadHIDMonitor.swift in Sources */,
 				0C2030112E980017007EDACE /* OrientationModel.swift in Sources */,
 				A9D72F7D248202350000A89F /* ContentView.swift in Sources */,
+				0C7029C227D703A600ADB7C1 /* ControllerService.swift in Sources */,
 				0C7029C427D703E500ADB7C1 /* ControllerInfo.swift in Sources */,
+				0CDA7FE82E9873B3008A3B88 /* JoyConToDSUBridge.swift in Sources */,
+				0CDA7FEA2E98741E008A3B88 /* DSUPacketSource.swift in Sources */,
+				0CDA7FE62E9873A8008A3B88 /* JoyConBackedDSUController.swift in Sources */,
 				A90DC849248C4E67003CD258 /* JoyConController.swift in Sources */,
+				0C7029C627D7052600ADB7C1 /* ClientsViewModel.swift in Sources */,
+				0C7029C027D7032600ADB7C1 /* DSUServer.swift in Sources */,
 				A9D72F7B248202350000A89F /* AppDelegate.swift in Sources */,
 				0C2030132E98001B007EDACE /* Controller3DView.swift in Sources */,
+				0C7029C827D7053200ADB7C1 /* Client.swift in Sources */,
 				0C2030172E98104D007EDACE /* AnalogStateModel.swift in Sources */,
 				A9888FA0249063580084EA3C /* GamepadAnalogChangedNotification.swift in Sources */,
 				0C2030152E980EDB007EDACE /* ButtonStateModel.swift in Sources */,
